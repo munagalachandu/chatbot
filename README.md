@@ -37,4 +37,45 @@ For deep understanding → Pro models (e.g., research summarization).
 6. Role-Based Prompting – Assigning the model a role for better responses. Example: "You are a history professor. Explain World War II in simple terms."  
 For hackathons, Few-Shot and Chain-of-Thought Prompting work best for accuracy and reasoning.
 
-   
+   FOR HISTORY SAVING :
+   import google.generativeai as genai
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+
+# Configure API Key
+genai.configure(api_key="YOUR_API_KEY")
+model = genai.GenerativeModel("gemini-1.5-flash")
+
+# Initialize Flask app
+app = Flask(__name__)
+CORS(app)
+
+# Dictionary to store chat history
+chat_history = {}
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    """Handles chat requests and stores history."""
+    try:
+        data = request.json
+        user_id = data.get("user_id", "default_user")  # Unique user ID
+        user_message = data.get("message", "").strip()
+        if not user_message:
+            return jsonify({"error": "No message provided"}), 400
+        # Initialize history if user is new
+        if user_id not in chat_history:
+            chat_history[user_id] = []
+        # Add user message to history
+        chat_history[user_id].append({"role": "user", "message": user_message})
+        # Generate AI response
+        response = model.generate_content(user_message)
+        bot_response = response.text.strip()
+        # Add bot response to history
+        chat_history[user_id].append({"role": "bot", "message": bot_response})
+        return jsonify({"response": bot_response, "history": chat_history[user_id]})
+    except Exception as e:
+        return jsonify({"error": "Something went wrong", "details": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
